@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İnternet Bağlantı İzleyici</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>İnternet Monitor</h1>
+            <div class="header-controls">
+                <div id="current-status" class="status-unknown">
+                    <span id="status-text">Durum yükleniyor...</span>
+                    <span id="latency"></span>
+                </div>
+                <button id="theme-switcher" class="theme-btn">🌙</button>
+            </div>
+        </header>
+
+        <main>
+            <section class="chart-container">
+                <h2>Bağlantı Durumu Grafiği</h2>
+                <div class="chart-controls">
+                    <div class="control-group">
+                        <div class="time-range">
+                            <label for="time-range-select">Zaman Aralığı:</label>
+                            <select id="time-range-select">
+                                <option value="0.0167">Son 1 dakika</option>
+                                <option value="0.0833">Son 5 dakika</option>
+                                <option value="0.1667">Son 10 dakika</option>
+                                <option value="0.5">Son 30 dakika</option>
+                                <option value="1" selected>Son 1 saat</option>
+                                <option value="6">Son 6 saat</option>
+                                <option value="12">Son 12 saat</option>
+                                <option value="24">Son 24 saat</option>
+                                <option value="48">Son 2 gün</option>
+                                <option value="168">Son 7 gün</option>
+                                <option value="custom">Özel Aralık</option>
+                            </select>
+                        </div>
+                        <div class="custom-range" id="custom-range-container" style="display: none;">
+                            <label for="custom-hours">Saat:</label>
+                            <input type="number" id="custom-hours" min="0" max="168" value="1" step="1">
+                            <label for="custom-minutes">Dakika:</label>
+                            <input type="number" id="custom-minutes" min="0" max="59" value="0" step="1">
+                            <button id="apply-custom-range">Uygula</button>
+                        </div>
+                        <div class="auto-refresh">
+                            <label for="auto-refresh-select">Otomatik Yenileme:</label>
+                            <select id="auto-refresh-select">
+                                <option value="off">Kapalı</option>
+                                <option value="5" selected>5 sn</option>
+                                <option value="10">10 sn</option>
+                                <option value="30">30 sn</option>
+                                <option value="60">1 dk</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button id="refresh-btn">Yenile</button>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="connection-chart"></canvas>
+                </div>
+            </section>
+
+            <section class="stats-container">
+                <h2>Bağlantı İstatistikleri</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Toplam Kesinti</h3>
+                        <p id="total-outages">Yükleniyor...</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Toplam Kesinti Süresi</h3>
+                        <p id="total-outage-time">Yükleniyor...</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Ortalama Kesinti Süresi</h3>
+                        <p id="avg-outage-time">Yükleniyor...</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Ortalama Gecikme</h3>
+                        <p id="avg-latency">Yükleniyor...</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="outages-container">
+                <h2>Son Kesintiler</h2>
+                <div class="outages-list-container">
+                    <table id="outages-table">
+                        <thead>
+                            <tr>
+                                <th>Başlangıç</th>
+                                <th>Bitiş</th>
+                                <th>Süre</th>
+                            </tr>
+                        </thead>
+                        <tbody id="outages-list">
+                            <tr>
+                                <td colspan="3" class="loading-text">Yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <div class="pagination" id="outages-pagination">
+                        <button id="prev-page" disabled>&laquo; Önceki</button>
+                        <span id="page-info">Sayfa 1 / 1</span>
+                        <button id="next-page" disabled>Sonraki &raquo;</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>İnternet Monitor &copy; 2025</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html> 
