@@ -528,6 +528,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function updateOutagesList() {
         if (allOutages.length === 0) {
             outagesList.innerHTML = '<tr><td colspan="3" class="loading-text">Kesinti yok</td></tr>';
+            // Eğer kesinti yoksa varolan butonları kaldır
+            const existingBtnContainer = document.querySelector('.export-buttons-container');
+            if (existingBtnContainer) {
+                existingBtnContainer.remove();
+            }
             return;
         }
         
@@ -547,6 +552,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 </tr>
             `;
         }).join('');
+
+        // Varolan buton konteynerini kontrol et
+        let exportBtnContainer = document.querySelector('.export-buttons-container');
+        
+        // Eğer buton konteyneri yoksa oluştur
+        if (!exportBtnContainer) {
+            exportBtnContainer = document.createElement('div');
+            exportBtnContainer.className = 'export-buttons-container';
+            exportBtnContainer.innerHTML = `
+                <button onclick="window.exportToPDF()" class="export-button pdf-button" data-tooltip="PDF İndir">
+                    📑
+                </button>
+                <button onclick="window.exportToCSV()" class="export-button csv-button" data-tooltip="CSV İndir">
+                    📊
+                </button>
+                <button onclick="window.exportToTXT()" class="export-button txt-button" data-tooltip="TXT İndir">
+                    📝
+                </button>
+            `;
+            const outagesContainer = document.querySelector('.outages-container');
+            outagesContainer.appendChild(exportBtnContainer);
+        }
     }
     
     function updatePagination() {
@@ -603,5 +630,252 @@ document.addEventListener('DOMContentLoaded', () => {
             minute: '2-digit',
             second: '2-digit'
         });
+    }
+
+    // Add print function to window object
+    window.printOutages = function() {
+        // Create a new window for printing
+        const printWindow = window.open('', '_blank');
+        
+        // Get current date for report header
+        const reportDate = formatDateTime(new Date());
+        
+        // Create print content with all outages
+        const printContent = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Kesinti Raporu - ${reportDate}</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        line-height: 1.6;
+                        margin: 20px;
+                    }
+                    .report-header {
+                        text-align: center;
+                        margin-bottom: 30px;
+                    }
+                    .report-title {
+                        font-size: 24px;
+                        margin-bottom: 10px;
+                    }
+                    .report-date {
+                        color: #666;
+                        font-size: 14px;
+                    }
+                    .stats-container {
+                        margin-bottom: 20px;
+                        padding: 15px;
+                        background-color: #f5f5f5;
+                        border-radius: 5px;
+                    }
+                    .stats-title {
+                        font-weight: bold;
+                        margin-bottom: 10px;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 20px;
+                    }
+                    th, td {
+                        border: 1px solid #ddd;
+                        padding: 12px;
+                        text-align: left;
+                    }
+                    th {
+                        background-color: #f5f5f5;
+                    }
+                    tr:nth-child(even) {
+                        background-color: #f9f9f9;
+                    }
+                    @media print {
+                        .stats-container {
+                            background-color: #f5f5f5 !important;
+                            -webkit-print-color-adjust: exact;
+                        }
+                        th {
+                            background-color: #f5f5f5 !important;
+                            -webkit-print-color-adjust: exact;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="report-header">
+                    <div class="report-title">İnternet Kesinti Raporu</div>
+                    <div class="report-date">Rapor Tarihi: ${reportDate}</div>
+                </div>
+                
+                <div class="stats-container">
+                    <div class="stats-title">Özet Bilgiler</div>
+                    <div>Toplam Kesinti Sayısı: ${totalOutagesEl.textContent}</div>
+                    <div>Toplam Kesinti Süresi: ${totalOutageTimeEl.textContent}</div>
+                    <div>Ortalama Kesinti Süresi: ${avgOutageTimeEl.textContent}</div>
+                    <div>Ortalama Gecikme: ${avgLatencyEl.textContent}</div>
+                </div>
+
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Başlangıç Zamanı</th>
+                            <th>Bitiş Zamanı</th>
+                            <th>Süre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${allOutages.map(outage => {
+                            const duration = (outage.end - outage.start) / (1000 * 60);
+                            return `
+                                <tr>
+                                    <td>${formatDateTime(outage.start)}</td>
+                                    <td>${formatDateTime(outage.end)}</td>
+                                    <td>${formatMinutes(duration)}</td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+        
+        // Write content to print window
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+        
+        // Wait for content to load then print
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    };
+
+    // Add export functions to window object
+    window.exportToPDF = function() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        
+        // Get current date for report header
+        const reportDate = formatDateTime(new Date());
+
+        // PDF için özel font tanımlamaları
+        doc.setFont("helvetica");
+        
+        // Add report title with encoding
+        doc.setFontSize(20);
+        doc.text('Internet Kesinti Raporu', 105, 20, { align: 'center' });
+        
+        // Add report date
+        doc.setFontSize(12);
+        doc.text(`Rapor Tarihi: ${reportDate}`, 105, 30, { align: 'center' });
+        
+        // Add statistics
+        doc.setFontSize(14);
+        doc.text('Ozet Bilgiler:', 20, 45);
+        doc.setFontSize(12);
+        doc.text(`Toplam Kesinti Sayisi: ${totalOutagesEl.textContent}`, 20, 55);
+        doc.text(`Toplam Kesinti Suresi: ${totalOutageTimeEl.textContent}`, 20, 62);
+        doc.text(`Ortalama Kesinti Suresi: ${avgOutageTimeEl.textContent}`, 20, 69);
+        doc.text(`Ortalama Gecikme: ${avgLatencyEl.textContent}`, 20, 76);
+        
+        // Prepare table data
+        const tableData = allOutages.map(outage => {
+            const duration = (outage.end - outage.start) / (1000 * 60);
+            return [
+                formatDateTime(outage.start),
+                formatDateTime(outage.end),
+                formatMinutes(duration)
+            ];
+        });
+        
+        // Add table with encoding
+        doc.autoTable({
+            startY: 90,
+            head: [['Baslangic Zamani', 'Bitis Zamani', 'Sure']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { 
+                fillColor: [52, 152, 219],
+                font: 'helvetica',
+                textColor: [255, 255, 255]
+            },
+            styles: { 
+                font: 'helvetica',
+                fontSize: 10
+            },
+            margin: { top: 90 }
+        });
+        
+        // Save PDF
+        doc.save(`internet-kesinti-raporu-${formatDateForFilename(new Date())}.pdf`);
+    };
+
+    window.exportToCSV = function() {
+        const reportDate = formatDateTime(new Date());
+        
+        // CSV başlık satırı
+        let csvContent = 'Başlangıç Zamanı,Bitiş Zamanı,Süre\n';
+        
+        // Tüm kesintileri CSV formatına dönüştür
+        allOutages.forEach(outage => {
+            const duration = (outage.end - outage.start) / (1000 * 60);
+            csvContent += `${formatDateTime(outage.start)},${formatDateTime(outage.end)},${formatMinutes(duration)}\n`;
+        });
+        
+        // CSV dosyasını indir
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `internet-kesinti-raporu-${formatDateForFilename(new Date())}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    };
+
+    window.exportToTXT = function() {
+        // Create text content with UTF-8 BOM for proper Turkish character support
+        const BOM = '\uFEFF';
+        const reportDate = formatDateTime(new Date());
+        let content = BOM + 'İNTERNET KESİNTİ RAPORU\n';
+        content += '========================\n\n';
+        content += `Rapor Tarihi: ${reportDate}\n\n`;
+        
+        content += 'ÖZET BİLGİLER\n';
+        content += '-------------\n';
+        content += `Toplam Kesinti Sayısı: ${totalOutagesEl.textContent}\n`;
+        content += `Toplam Kesinti Süresi: ${totalOutageTimeEl.textContent}\n`;
+        content += `Ortalama Kesinti Süresi: ${avgOutageTimeEl.textContent}\n`;
+        content += `Ortalama Gecikme: ${avgLatencyEl.textContent}\n\n`;
+        
+        content += 'KESİNTİ DETAYLARI\n';
+        content += '----------------\n';
+        content += 'Başlangıç Zamanı        Bitiş Zamanı            Süre\n';
+        content += '------------------------------------------------\n';
+        
+        allOutages.forEach(outage => {
+            const duration = (outage.end - outage.start) / (1000 * 60);
+            content += `${formatDateTime(outage.start).padEnd(22)} `;
+            content += `${formatDateTime(outage.end).padEnd(22)} `;
+            content += `${formatMinutes(duration)}\n`;
+        });
+        
+        // Create and trigger download with UTF-8 encoding
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `internet-kesinti-raporu-${formatDateForFilename(new Date())}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    };
+
+    // Helper function for formatting date in filenames
+    function formatDateForFilename(date) {
+        return date.toISOString().split('T')[0];
     }
 });
